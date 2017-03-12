@@ -101,7 +101,6 @@ def get_umsi_data():
 		return pageList
 
 
-
 ## PART 2 (b) - Create a dictionary saved in a variable umsi_titles 
 ## whose keys are UMSI people's names, and whose associated values are those people's titles, e.g. "PhD student" or "Associate Professor of Information"...
 
@@ -112,39 +111,65 @@ key_pairs = []
 for page in htmlList:
 	soup = BeautifulSoup(page,"html.parser")
 	people = soup.find_all("div",{"class":"views-row"})
-	print(len(people))
 
 	for person in people:
-			## Find the container that holds the name that belongs to that person
+		## Find the container that holds the name that belongs to that person
 		name = (person.find("div",{"class":"field field-name-title field-type-ds field-label-hidden"}))
 		name = (name.find_all('h2')[0].text)
-			## Find the container that holds the title that belongs to that person (HINT: a class name)
+		## Find the container that holds the title that belongs to that person (HINT: a class name)
 		title = (person.find("div",{"class":"field field-name-field-person-titles field-type-text field-label-hidden"}))
 		title = (title.find_all(class_="field-item even")[0].text)
-			## Grab the text of each of those elements and put them in the dictionary umsi_titles properly
+		## Grab the text of each of those elements and put them in the dictionary umsi_titles properly
 		key_pairs.append((name, title))
 umsi_titles = dict(key_pairs)
 
-#content-inside > div > div.view-content > div.views-row.views-row-7.views-row-odd > div > div. field field-name-field-person-titles field-type-text field-label-hidden
-#div. field field-name-title field-type-ds field-label-hidden
-#content-inside > div > div.view-content > div.views-row.views-row-7.views-row-odd > div > div.field.field-name-title.field-type-ds.field-label-hidden
 
 ## PART 3 (a) - Define a function get_five_tweets
 ## INPUT: Any string
 ## Behavior: See instructions. Should search for the input string on twitter and get results. Should check for cached data, use it if possible, and if not, cache the data retrieved.
 ## RETURN VALUE: A list of strings: A list of just the text of 5 different tweets that result from the search.
 
+def get_five_tweets(anyString):
 
+	#append anyString to the end of "twitter_" to obtain the desired key
+	newKey = "twitter_" + anyString
+
+	#look for the key value pair in CACHE_DICTION
+	if newKey in CACHE_DICTION: 
+		results = CACHE_DICTION[newKey] 
+	else:
+		#update CACHE_DICTION with the new key value pair
+		results = api.search(q=anyString) 
+		CACHE_DICTION[newKey] = results 
+
+		# write CACHE_DICTION with the new key value pair back into the cache
+		f = open(file_name,'w')
+		f.write(json.dumps(CACHE_DICTION)) 
+		f.close()
+
+
+	list_of_tweets = results["statuses"]
+
+	fiveTweets = []
+	i = 0
+	while i < 5:
+		fiveTweets.append(str(list_of_tweets[i]["text"].encode('utf-8')))
+		i += 1
+	return fiveTweets
 
 
 ## PART 3 (b) - Write one line of code to invoke the get_five_tweets function with the phrase "University of Michigan" and save the result in a variable five_tweets.
 
-
+five_tweets = get_five_tweets("University of Michigan")
 
 
 ## PART 3 (c) - Iterate over the five_tweets list, invoke the find_urls function that you defined in Part 1 on each element of the list, and accumulate a new list of each of the total URLs in all five of those tweets in a variable called tweet_urls_found. 
+tweet_urls_found = ()
 
-
+for tweet in five_tweets:
+	tweet_url = find_urls(tweet)
+	if tweet_url:
+		tweet_urls_found = tweet_urls_found + tuple(tweet_url)
 
 
 
