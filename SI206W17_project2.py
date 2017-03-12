@@ -3,6 +3,7 @@
 ## COMMENT HERE WITH:
 ## Your name: Gabriella Gazdecki
 ## Anyone you worked with on this project:
+## GitHub Repo: https://github.com/gazdgabr/SI206_Project2
 
 ## Below we have provided import statements, comments to separate out the parts of the project, instructions/hints/examples, and at the end, tests. See the PDF of instructions for more detail. 
 ## You can check out the SAMPLE206project2_caching.json for an example of what your cache file might look like.
@@ -71,30 +72,45 @@ def find_urls(inputStr):
 
 def get_umsi_data():
 
+	## This is the key we're looking for
 	desiredKey ="umsi_directory_data"
 
+	## If the key is already in the cache, return the value associated with that key
 	if desiredKey in CACHE_DICTION:
 		return CACHE_DICTION[desiredKey]
+
+	## Otherwise, go get the data, cache it, and return it
 	else:
+		## Stores text from the first page of the directory inside the list pageList
 		pageList = []
 		first_url = "https://www.si.umich.edu/directory?field_person_firstname_value=&field_person_lastna me_value=&rid=All"
 		htmlText = requests.get(first_url, headers={'User-Agent': 'SI_CLASS'}).text
 		pageList.append(htmlText)
 
+		## Turns the text from the page into a Beautiful Soup object
 		soup = BeautifulSoup(htmlText, "html.parser")
+
+		## Grab URL for the next page
 		nextPage = soup.find_all(class_="pager-next last")
 		nextPage = nextPage[0].find('a')
 
+		## When there's an 'a' tag, we know there's another page to go through
 		while type(nextPage) != type(None):
-			
+			## Turns the next page's URL into a string
 			nextPage = str(nextPage.get('href'))
+			## Adds it to the base URL
 			base_url = "https://www.si.umich.edu/" + nextPage
+			## Adds the text from that page to the pageList list
 			pageList.append(requests.get(base_url, headers={'User-Agent': 'SI_CLASS'}).text)
+			## Turns it into a Beautiful Soup object
 			soup = BeautifulSoup(pageList[-1], "html.parser")
+			## Looks for the next page
 			nextPage = soup.find_all(class_="pager-next last")
 			nextPage = nextPage[0].find('a')
 
+		## Adds everything to the cache dictionary under the 'umsi_directory_data' key
 		CACHE_DICTION[desiredKey] = pageList
+		## Adds the dictionary to the json cache
 		f = open(file_name,'w')
 		f.write(json.dumps(CACHE_DICTION))
 		f.close()
