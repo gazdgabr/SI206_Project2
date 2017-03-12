@@ -40,6 +40,7 @@ try:
 	cache_file = open(file_name,'r')
 	cache_contents = cache_file.read()
 	CACHE_DICTION = json.loads(cache_contents)
+	cache_file.close()
 except:
 	cache_file = open(file_name, "w", encoding="utf-8")
 	CACHE_DICTION = {}
@@ -76,31 +77,57 @@ def get_umsi_data():
 		return CACHE_DICTION[desiredKey]
 	else:
 		pageList = []
-		base_url = "https://www.si.umich.edu/directory?field_person_firstname_value=&field_person_lastna me_value=&rid=All"
-		htmlText = requests.get(base_url, headers={'User-Agent': 'SI_CLASS'})
-		pageList += [htmlText]
+		first_url = "https://www.si.umich.edu/directory?field_person_firstname_value=&field_person_lastna me_value=&rid=All"
+		htmlText = requests.get(first_url, headers={'User-Agent': 'SI_CLASS'}).text
+		pageList.append(htmlText)
+
 		soup = BeautifulSoup(htmlText, "html.parser")
+		nextPage = soup.find_all(class_="pager-next last")
+		nextPage = nextPage[0].find('a')
 
-		nextPage = soup.find_all(title="Go to next page")
+		while type(nextPage) != type(None):
+			
+			nextPage = str(nextPage.get('href'))
+			base_url = "https://www.si.umich.edu/" + nextPage
+			pageList.append(requests.get(base_url, headers={'User-Agent': 'SI_CLASS'}).text)
+			soup = BeautifulSoup(pageList[-1], "html.parser")
+			nextPage = soup.find_all(class_="pager-next last")
+			nextPage = nextPage[0].find('a')
 
-		while len(nextPage):
-			base_url = nextPage[0].text
-			pageList = pageList + [requests.get(base_url, headers={'User-Agent': 'SI_CLASS'})]
-			soup = BeautifulSoup(pageList[0], "html.parser")
-			nextPage = soup.find_all(title="Go to next page")
-	CACHE_DICTION[desiredKey] = pageList
-	print(str(CACHE_DICTION))
+		CACHE_DICTION[desiredKey] = pageList
+		f = open(file_name,'w')
+		f.write(json.dumps(CACHE_DICTION))
+		f.close()
+		return pageList
 
 
 
 ## PART 2 (b) - Create a dictionary saved in a variable umsi_titles 
 ## whose keys are UMSI people's names, and whose associated values are those people's titles, e.g. "PhD student" or "Associate Professor of Information"...
 
+htmlList = get_umsi_data()
+umsi_titles = {}
+key_pairs = []
 
+for page in htmlList:
+	soup = BeautifulSoup(page,"html.parser")
+	people = soup.find_all("div",{"class":"views-row"})
+	print(len(people))
 
+	for person in people:
+			## Find the container that holds the name that belongs to that person
+		name = (person.find("div",{"class":"field field-name-title field-type-ds field-label-hidden"}))
+		name = (name.find_all('h2')[0].text)
+			## Find the container that holds the title that belongs to that person (HINT: a class name)
+		title = (person.find("div",{"class":"field field-name-field-person-titles field-type-text field-label-hidden"}))
+		title = (title.find_all(class_="field-item even")[0].text)
+			## Grab the text of each of those elements and put them in the dictionary umsi_titles properly
+		key_pairs.append((name, title))
+umsi_titles = dict(key_pairs)
 
-
-
+#content-inside > div > div.view-content > div.views-row.views-row-7.views-row-odd > div > div. field field-name-field-person-titles field-type-text field-label-hidden
+#div. field field-name-title field-type-ds field-label-hidden
+#content-inside > div > div.view-content > div.views-row.views-row-7.views-row-odd > div > div.field.field-name-title.field-type-ds.field-label-hidden
 
 ## PART 3 (a) - Define a function get_five_tweets
 ## INPUT: Any string
